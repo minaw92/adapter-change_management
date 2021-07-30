@@ -83,7 +83,7 @@ class ServiceNowAdapter extends EventEmitter {
     this.healthcheck();
   }
 
-/**
+  /**
  * @memberof ServiceNowAdapter
  * @method healthcheck
  * @summary Check ServiceNow Health
@@ -101,6 +101,8 @@ healthcheck(callback) {
     * or the instance was hibernating. You must write
     * the blocks for each branch.
     */
+    let callbackData = null;
+    let callbackError = null;
    if (error) {
      /**
       * Write this block.
@@ -114,9 +116,10 @@ healthcheck(callback) {
       * healthcheck(), execute it passing the error seen as an argument
       * for the callback's errorMessage parameter.
       */
-     this.emitOffline();
-     log.info('Service now adapter is offline {this.id}');
-     callbackError = error;
+      this.emitOffline();
+      log.info('Service now adapter is offline {this.id}');
+      
+      callbackError = error;
    } else {
      /**
       * Write this block.
@@ -129,10 +132,12 @@ healthcheck(callback) {
       * responseData parameter.
       */
       this.emitOnline();
+      
       callbackData = result;
       log.info('Service now adapter is online');
-   }
+   }   
  });
+ 
 }
 
   /**
@@ -181,15 +186,30 @@ healthcheck(callback) {
    * @param {ServiceNowAdapter~requestCallback} callback - The callback that
    *   handles the response.
    */
-  getRecord(callback) {
-    /**
-     * Write the body for this function.
-     * The function is a wrapper for this.connector's get() method.
-     * Note how the object was instantiated in the constructor().
-     * get() takes a callback function.
-     */
-    ServiceNowConnector.get(callback);
-  }
+    getRecord(callback) {
+        this.connector.get((data, error) => {
+            if (error) {
+                console.error(`\nError returned from GET request:\n${JSON.stringify(error)}`);
+                callback(error);
+            }
+            else {
+                let body = null;
+                //log.info(`\nResponse returned from GET request:\n${JSON.stringify(data)}`);
+                if (typeof data == 'object') {
+                    if (data.body) {
+                        body = JSON.parse(data.body);
+                        let result = body.result;
+                        result.forEach((obj, index) => {
+                            result[index] = this.getResult(obj);
+                        });
+                        log.info("Retunring " + JSON.stringify(result))
+                        callback(result);
+                        //return result;
+                    }
+                }
+            }
+        });
+    }
 
   /**
    * @memberof ServiceNowAdapter
@@ -200,15 +220,52 @@ healthcheck(callback) {
    * @param {ServiceNowAdapter~requestCallback} callback - The callback that
    *   handles the response.
    */
-  postRecord(callback) {
-    /**
-     * Write the body for this function.
-     * The function is a wrapper for this.connector's post() method.
-     * Note how the object was instantiated in the constructor().
-     * post() takes a callback function.
-     */
-     ServiceNowConnector.post(callback);
-  }
-}
+    postRecord(callback) {
+        this.connector.post((data, error) => {
+            log.info("postRecord started  connectorpost****");
+            if (error) {
+                console.error(`\nError returned from POST request:\n${JSON.stringify(error)}`);
+            }
+            else {
+                let result = null;
+                if (typeof data == 'object') {
+                    console.info(JSON.stringify(data));
+                    if (data.body) {
+                        let body = JSON.parse(data.body);
+                        result = body.result;
+                        result = this.getResult(result);
+                    }
+                }
+                callback(result);
 
+            }
+
+        });
+
+    }
+
+   /**
+     * @memberof ServiceNowAdapter
+     * @method getResult
+     * @summary Build custom result object.
+     * @description Builds a new result object from response data.
+     *
+     * @param {object} responseData - The response json result
+     */
+
+    getResult(responseData) {
+
+        return {
+            'change_ticket_key': responseData.sys_id,
+            'change_ticket_number': responseData.number,
+            'active': responseData.active,
+            'priority': responseData.priority,
+            'description': responseData.description,
+            'work_start': responseData.work_start,
+            'work_end': responseData.work_end
+        };
+
+    }
+
+}
 module.exports = ServiceNowAdapter;
