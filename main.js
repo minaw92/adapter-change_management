@@ -186,30 +186,37 @@ healthcheck(callback) {
    * @param {ServiceNowAdapter~requestCallback} callback - The callback that
    *   handles the response.
    */
-    getRecord(callback) {
-        this.connector.get((data, error) => {
-            if (error) {
-                console.error(`\nError returned from GET request:\n${JSON.stringify(error)}`);
-                callback(error);
-            }
-            else {
-                let body = null;
-                //log.info(`\nResponse returned from GET request:\n${JSON.stringify(data)}`);
-                if (typeof data == 'object') {
-                    if (data.body) {
-                        body = JSON.parse(data.body);
-                        let result = body.result;
-                        result.forEach((obj, index) => {
-                            result[index] = this.getResult(obj);
-                        });
-                        log.info("Retunring " + JSON.stringify(result))
-                        callback(result);
-                        //return result;
-                    }
+  getRecord(callback) {
+    this.connector.get((data, error) => {
+        if (error) {
+          console.error(`\nError returned from GET request:\n${JSON.stringify(error)}`);
+        }
+        else{ 
+            //console.log(data)
+            //console.log('\n\n\n')
+            if ("body" in data){
+                
+                //let dataParsed= JSON.parse(data);
+                
+                let body = JSON.parse(data.body)
+                let result = body.result[0]
+                let finalresult=null
+                finalresult={
+                    'change_ticket_key': result.sys_id,
+                    'change_ticket_number': result.number,
+                    'active': result.active,
+                    'priority': result.priority,
+                    'description': result.description,
+                    'work_start': result.work_start,
+                    'work_end': result.work_end
                 }
+                console.log(finalresult)
+                callback(finalresult)
             }
-        });
-    }
+
+
+        }
+      })};
 
   /**
    * @memberof ServiceNowAdapter
@@ -220,52 +227,59 @@ healthcheck(callback) {
    * @param {ServiceNowAdapter~requestCallback} callback - The callback that
    *   handles the response.
    */
-    postRecord(callback) {
-        this.connector.post((data, error) => {
-            log.info("postRecord started  connectorpost****");
-            if (error) {
-                console.error(`\nError returned from POST request:\n${JSON.stringify(error)}`);
-            }
-            else {
-                let result = null;
-                if (typeof data == 'object') {
-                    console.info(JSON.stringify(data));
-                    if (data.body) {
-                        let body = JSON.parse(data.body);
-                        result = body.result;
-                        result = this.getResult(result);
-                    }
+  postRecord(callback) {
+    this.connector.post((data, error) => {
+        if (error) {
+          console.error(`\nError returned from GET request:\n${JSON.stringify(error)}`);
+        }
+        else{ 
+            //console.log(data)
+            //console.log('\n\n\n')
+            if ("body" in data){
+                
+                //let dataParsed= JSON.parse(data);
+                
+                let body = JSON.parse(data.body)
+                let result = body.result
+                //console.log(body)
+                let finalresult=null
+                finalresult={
+                    'change_ticket_key': result.sys_id,
+                    'change_ticket_number': result.number,
+                    'active': result.active,
+                    'priority': result.priority,
+                    'description': result.description,
+                    'work_start': result.work_start,
+                    'work_end': result.work_end
                 }
-                callback(result);
-
+                console.log(finalresult)
+                callback(finalresult)
             }
 
-        });
 
-    }
+        }
+      })}}
 
-   /**
-     * @memberof ServiceNowAdapter
-     * @method getResult
-     * @summary Build custom result object.
-     * @description Builds a new result object from response data.
-     *
-     * @param {object} responseData - The response json result
-     */
 
-    getResult(responseData) {
-
-        return {
-            'change_ticket_key': responseData.sys_id,
-            'change_ticket_number': responseData.number,
-            'active': responseData.active,
-            'priority': responseData.priority,
-            'description': responseData.description,
-            'work_start': responseData.work_start,
-            'work_end': responseData.work_end
-        };
-
-    }
-
-}
 module.exports = ServiceNowAdapter;
+
+
+const adapterProperties={
+  "url": "https://dev104543.service-now.com/",
+  "auth": {
+      "username": "admin",
+      "password": "3qYRHv4uCKqq"
+  },
+  "serviceNowTable": "change_request"
+}
+/*
+//to Test
+const id="1"
+mina= new ServiceNowAdapter(id, adapterProperties)
+mina.postRecord((data, error) => {
+  if (error) {
+    console.error(`\nError returned from POST request:\n${JSON.stringify(error)}`);
+  }
+  console.log(`\nResponse returned from POST request:\n${JSON.stringify(data)}`)
+})
+*/
